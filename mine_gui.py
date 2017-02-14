@@ -1,53 +1,64 @@
-import os
 from random import randrange
-import time
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow,QDialog
-from PyQt5 import QtCore
-from pyqt1 import *
 from inc_gui import *
-from init import *
+
+
 class MineField:
-    def __init__(self,minenum=3,sizex=5,sizey=5):
-        self.minenum=minenum
-        self.sizex=sizex
-        self.sizey=sizey
-        self.field=[[[0,'c'] for i in range(sizex+2)] for j in range(sizey+2)]       #c:covered o:open f:flag q:questioned
+    def __init__(self, mainWindow, ui):
+        self.minenum=3
+        self.sizex=5
+        self.sizey=5
+        self.field=[[[0,'c'] for i in range(self.sizex+2)] for j in range(self.sizey+2)]       #c:covered o:open f:flag q:questioned
         self.first=True
         self.start=False
         self.flagnum=0
-        self.existmine=minenum
-        self.printfield=None
+        self.existmine=self.minenum
+        self.mainWindow = mainWindow
+        self.ui = ui
+        self.firstGame = True
+
     def resize(self,minenum,sizex,sizey):
-        self.__init__(minenum,sizex,sizey)
+        self.__init__(self.mainWindow, self.ui)
+        self.minenum = minenum
+        self.sizex = sizex
+        self.sizey = sizey
+        self.existmine = self.minenum
+        self.field=[[[0,'c'] for i in range(self.sizex+2)] for j in range(self.sizey+2)]       #c:covered o:open f:flag q:questioned
+
     def gen_field(self,x,y):
         for i in range(self.minenum):
-            mx=randrange(1,self.sizex+1)
-            my=randrange(1,self.sizey+1)
-            if not(-1<=mx-x<=1 and -1<=my==y<=1 or self.field[my][mx][0]=='x'):
-                self.field[my][mx][0]='x'
-                for j in range(-1,2):
-                    for k in range(-1,2):
-                        if self.field[my+j][mx+k][0]!='x':
-                            self.field[my+j][mx+k][0]+=1
-        print(self.field)
-    def show(self,px,py):
+            setMine = False
+            while not setMine:
+                mx=randrange(1,self.sizex+1)
+                my=randrange(1,self.sizey+1)
+                if not(-1<=mx-x<=1 and -1<=my==y<=1 or self.field[my][mx][0]=='x'):
+                    self.field[my][mx][0]='x'
+                    setMine = True
+                    for j in range(-1,2):
+                        for k in range(-1,2):
+                            if self.field[my+j][mx+k][0]!='x':
+                                self.field[my+j][mx+k][0]+=1
+        #print(self.field)
+
+    def show(self, px, py):
         #os.system('cls')
-        for i in range(1,self.sizey+1):
+        for i in range(1, self.sizey+1):
             outs=''
             for j in range(1,self.sizex+1):
-                if i==py and j==px:			#Show Pointer
-                    outs+='>'
+                if i == py and j == px:			#Show Pointer
+                    outs += '>'
                 else:
-                    outs+=' '
+                    outs += ' '
                 if self.field[i][j][1]=='o':
-                    outs+=str(self.field[i][j][0])
+                    outs += str(self.field[i][j][0])
                 elif self.field[i][j][1]=='c':
-                    outs+='*'
+                    outs += '*'
                 else:
-                    outs+=self.field[i][j][1]
-            outs+='|'
+                    outs += self.field[i][j][1]
+            outs += '|'
             print(outs)
+
     def open_empty_field(self,x,y):
         if self.field[y][x][0]=='x' or self.field[y][x][1]!='c':
             return []
@@ -57,7 +68,7 @@ class MineField:
             self.field[y][x][1]='o'
             return [(x,y)]
         cp=[]
-        print('cp',cp)
+        #print('cp',cp)
         self.field[y][x][1]='o'
         cp.append((x,y))
         for i in range(-1,2):
@@ -65,6 +76,7 @@ class MineField:
                 if i!=0 or j!=0:
                     cp+=self.open_empty_field(x+i,y+j)
         return cp
+
     def open(self,x,y):
         x+=1
         y+=1
@@ -73,8 +85,10 @@ class MineField:
             #self.printfield()
             self.first=False
         if self.field[y][x][0]=='x':
-            print('Boom')
+            #print('Boom')
+            self.gameover(False)
         return self.open_empty_field(x,y)
+
     def mark(self,x,y):
         x+=1
         y+=1
@@ -83,8 +97,9 @@ class MineField:
             if self.field[y][x][0]=='x':
                 self.existmine-=1
             self.flagnum+=1
-            if self.existmine==0:
-                print('Win')
+            if self.existmine==0 and self.flagnum == self.minenum:
+                #print('Win')
+                self.gameover(True)
             return 'f'
         if self.field[y][x][1]=='f':
             self.field[y][x][1]='q'
@@ -96,31 +111,41 @@ class MineField:
             self.field[y][x][1]='c'
             return ''
         return ''
-def main(): 
-    #(field_x,field_y)=map(int,input('Input Field Size:').split(' '))
-   # minenum=int(input('Input The Number of Mine:'))
-   # while minenum>(field_x*field_y/2):
-    #    minenum=int(input('\rInput The Number of Mine:'))
-    minefield=MineField()
-    start_time=0
-    end_time=0
-    start=False
-    #GUI
+
+    def gamestart(self, minenum, sizex, sizey):
+        self.resize(minenum, sizex, sizey)
+        self.ui.setupUi(self.mainWindow, self)
+        self.firstGame = False
+        self.mainWindow.show()
+
+    def setRestartEnt(self,restartEnt):
+        self.restartEnt = restartEnt
+
+    def setExec(self, appexec):
+        self.exec = appexec
+
+    def gameover(self, state):
+        self.ui.emptyUi()
+        time = self.ui.timerPause()
+        _overdiag = QDialog(self.mainWindow)
+        self.overdiag = Ui_OverDialog()
+        self.overdiag.setupUi(_overdiag, state, self.restartEnt, [self.minenum, time])
+        self.overdiag.setExec(self.appExec)
+        self.overdiag.Dialog.show()
+
+    def appExec(self):
+        self.mainWindow.close()
+
+
+def main():
     app = QApplication(sys.argv)
     mainWindow=QMainWindow()
     ui=Ui_MainWindow()
-    print(id(mainWindow))
-    def gamestart(minenum,sizex,sizey):
-        minefield.resize(minenum,sizex,sizey)
-        ui.setupUi(mainWindow,minefield)
-        mainWindow.show()
-        print(id(mainWindow))
+    minefield = MineField(mainWindow, ui)
+    diag_init = Ui_InitDialog(mainWindow)
+    minefield.setRestartEnt(diag_init.restart)
+    diag_init.setupUi(minefield.gamestart)
 
-    diag=QDialog()
-    diag_init=Ui_InitDialog()
-    diag_init.setupUi(diag,gamestart)
-    diag.show()
-    
     sys.exit( app.exec_() )
 
 if __name__=='__main__':
